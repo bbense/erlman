@@ -1,2 +1,4 @@
-# erlman
-Elixir code to read Erlang man pages as markdown.
+Erlman
+======
+
+** Library for accessing erl man pages  **

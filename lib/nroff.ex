@@ -4,7 +4,7 @@ defmodule Nroff do
 
 	def to_markdown(string) do
 		String.split(string,"\n") |>
-		Enum.map_join("\n",fn(line) -> translate(line) end) 
+		Enum.map_join(fn(line) -> translate(line) end) 
 	end
 
 	def find(string,function) do
@@ -19,9 +19,10 @@ defmodule Nroff do
 	end
 	
 	def swap_inline(line) do 
-		String.replace(line,"\\fI","`") |> 
-		String.replace("\\fR","`") |>
-		String.replace("\\&","")
+		newline = String.replace(line,"\\fI","`") |> 
+		          String.replace("\\fR","`") |>
+		          String.replace("\\&","") 
+    newline<>"\n"
 	end
 
 	def get_macro(line) do
@@ -38,15 +39,15 @@ defmodule Nroff do
 	end 
 
 	def swap_macro(".TH", line) do
-		"# "<>line 
+		"# "<>line<>"\n"
 	end
 
 	def swap_macro(".SH", line) do
-		"## "<>line 
+		"## "<>line<>"\n"
 	end
 
   def swap_macro(".SS", line) do
-    "### "<>line 
+    "### "<>line<>"\n" 
   end
 
   def swap_macro(".TP", line) do

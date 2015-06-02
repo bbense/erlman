@@ -3,7 +3,12 @@ defmodule Erlman do
   require Nroff
 
   def manpath do
-	 "/usr/local/Cellar/erlang/17.5/lib/erlang/man"
+    start = to_string(:os.find_executable('erl'))
+    finish = Path.split(start) |>
+             Stream.scan(&Path.join(&2,&1)) |> 
+             Enum.filter( fn(p)  -> File.dir?(Path.join(p,"man")) end ) |>
+             List.last
+    Path.join(finish,"man")
   end
 
   @doc """
@@ -42,7 +47,47 @@ defmodule Erlman do
     function = convert(elixir_erlang_ref) |> Enum.at(1)
     doc = manstring(elixir_erlang_ref)
     fdoc = Nroff.find(doc,function)
-    Nroff.to_markdown(doc)
+    Nroff.to_markdown(fdoc)
+  end 
+
+  @doc """ 
+  Emulate behaviour of Code.gets_docs as far as possible.
+
+  Returns the docs for the given module.
+  The return value depends on the kind value:
+
+  :docs - list of all docstrings attached to functions and macros using the @doc attribute
+  :moduledoc - tuple {<line>, <doc>} where line is the line on which module definition starts and doc is the string attached to the module using the @moduledoc attribute
+  :all - a keyword list with both :docs and :moduledoc
+
+  """
+  def get_docs(module,kind) do
+    case kind do 
+      :docs      -> get_function_docs(module)
+      :moduledoc -> get_moduledoc(module)
+      :all       -> get_all_docs(module)
+      _          -> nil
+    end
+  end
+
+  @doc """
+  Return the results of :module.module_info(:exports)
+  """
+  def function_exports(module) do
+    code = ":"<>module<>".module_info(:exports)"
+    Code.eval_string(code,[],__ENV__)
+  end 
+
+  def get_function_docs(module) do
+    true
+  end 
+
+  def get_moduledoc(module) do
+    true
+  end 
+
+  def get_all_docs(module) do
+    true
   end 
 
   defp mandirs(path) do

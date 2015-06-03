@@ -6,7 +6,7 @@ defmodule Erlman do
     start = to_string(:os.find_executable('erl'))
     finish = Path.split(start) |>
              Stream.scan(&Path.join(&2,&1)) |> 
-             Enum.filter( fn(p)  -> File.dir?(Path.join(p,"man")) end ) |>
+             Enum.filter( fn(p)  -> File.exists?(Path.join([p,"man","man3","ets.3"])) end ) |>
              List.last
     Path.join(finish,"man")
   end

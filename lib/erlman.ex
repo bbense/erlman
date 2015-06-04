@@ -89,11 +89,11 @@ defmodule Erlman do
     Code.eval_string(code,[],__ENV__)
   end 
 
-  def get_function_docs(module) do
-    true
+  def get_function_docs(module,mandoc,funcs) do
+    [nroff_mod,nroff_func] = ErlmanNroff.split(mandoc)
   end 
 
-  def get_moduledoc(module) do
+  def get_moduledoc(module,mandoc,funcs) do
     true
   end 
 

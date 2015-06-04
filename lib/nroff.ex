@@ -1,4 +1,4 @@
-defmodule Erlman.Nroff do
+defmodule ErlmanNroff do
   @moduledoc """
   This module is meant to parse just enough nroff to convert the erlang man pages
   to markdown format compatible with Code.get_docs in elixir. It relies heavily 
@@ -24,6 +24,23 @@ defmodule Erlman.Nroff do
 			false -> swap_inline(line)
 		end 
 	end
+
+  @doc """
+  Splits manpage string into Module and Function Parts. 
+  """
+  def split(manstring) do
+    String.split(manstring,".SH EXPORTS", parts: 2)
+  end
+
+  @doc """
+  Match up function docs to elements in functions returned
+  from module:module_info
+  """
+  def parse_functions(funcs,nroff_funcs) do
+    Enum.map(funcs, fn(x) -> { Atom.to_string(elem(x,0)), elem(x,1) } end ) |>
+
+
+  end
 	
 	def swap_inline(line) do 
 		newline = String.replace(line,"\\fI","`") |> 
@@ -69,7 +86,7 @@ defmodule Erlman.Nroff do
     Indent count.to_i spaces
   """
   def swap_macro(".RS", count) do
-    line 
+    ""
   end
 
   def swap_macro(".RE", line) do
@@ -80,7 +97,7 @@ defmodule Erlman.Nroff do
     Turn off text fill
   """
   def swap_macro(".nf", line) do
-    "> "<>line 
+    line 
   end
 
 	def swap_macro(".fi", line) do

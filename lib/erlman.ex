@@ -67,15 +67,16 @@ defmodule Erlman do
       nil
     else 
      funcs = function_exports(module)
-     parse_docs(mandoc,funcs,kind)
+     parse_docs(module,funcs,mandoc,kind)
     end
   end
 
-  def parse_docs(mandoc,funcs, kind ) do
+  def parse_docs(module,funcs,mandoc,kind ) do
+    [nroff_mod,nroff_func] = ErlmanNroff.split(mandoc)
     case kind do 
-      :docs      -> get_function_docs(module,mandoc,funcs)
-      :moduledoc -> get_moduledoc(module,mandoc)
-      :all       -> get_all_docs(module,mandoc,funcs)
+      :docs      -> get_function_docs(module,funcs,nroff_func)
+      :moduledoc -> get_moduledoc(module,nroff_mod)
+      :all       -> get_all_docs(module,funcs,mandoc)
       _          -> nil
     end
   end 
@@ -89,15 +90,15 @@ defmodule Erlman do
     Code.eval_string(code,[],__ENV__)
   end 
 
-  def get_function_docs(module,mandoc,funcs) do
-    [nroff_mod,nroff_func] = ErlmanNroff.split(mandoc)
+  def get_function_docs(module,nroff_func,funcs) do
+    ErlmanNroff.parse_functions(funcs,nroff_func)
   end 
 
-  def get_moduledoc(module,mandoc,funcs) do
+  def get_moduledoc(module,mandoc) do
     true
   end 
 
-  def get_all_docs(module) do
+  def get_all_docs(module,mandocs,funcs) do
     true
   end 
 

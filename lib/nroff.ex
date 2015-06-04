@@ -14,8 +14,15 @@ defmodule ErlmanNroff do
 		Enum.map_join(fn(line) -> translate(line) end) 
 	end
 
+  @doc """
+  Find the section of string that has the docs for function. 
+  We assume erlang nroff that has this format. 
+
+      .B
+      function(arg1, arg2) -> ResultType
+  """
 	def find(string,function) do
-		function
+    String.split(string,"\n.B\n") 
 	end 
 
 	def translate(line) do
@@ -38,8 +45,7 @@ defmodule ErlmanNroff do
   """
   def parse_functions(funcs,nroff_funcs) do
     Enum.map(funcs, fn(x) -> { Atom.to_string(elem(x,0)), elem(x,1) } end ) |>
-
-
+    Enum.map(fn(pair) -> {pair, find(nroff_funcs,pair)} end )
   end
 	
 	def swap_inline(line) do 

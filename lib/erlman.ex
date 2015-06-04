@@ -1,6 +1,6 @@
 defmodule Erlman do
 
-  require Nroff
+  require ErlmanNroff
 
   def manpath do
     start = to_string(:os.find_executable('erl'))
@@ -33,7 +33,7 @@ defmodule Erlman do
 
   def manstring(function_name) do 
     case manpage(function_name) do
-      {:ok, manfile}    -> File.read!(manfile)
+      {:ok, manfile} -> File.read!(manfile)
       {:error, :enoent} -> :nofile
     end
   end
@@ -62,16 +62,27 @@ defmodule Erlman do
 
   """
   def get_docs(module,kind) do
-    case kind do 
-      :docs      -> get_function_docs(module)
-      :moduledoc -> get_moduledoc(module)
-      :all       -> get_all_docs(module)
-      _          -> nil
+    mandoc = Erlman.manstring(module)
+    if mandoc == :nofile do
+      nil
+    else 
+     funcs = function_exports(module)
+     parse_docs(mandoc,funcs,kind)
     end
   end
 
+  def parse_docs(mandoc,funcs, kind ) do
+    case kind do 
+      :docs      -> get_function_docs(module,mandoc,funcs)
+      :moduledoc -> get_moduledoc(module,mandoc)
+      :all       -> get_all_docs(module,mandoc,funcs)
+      _          -> nil
+    end
+  end 
+
   @doc """
   Return the results of :module.module_info(:exports)
+  Will raise error if :module is not loaded. 
   """
   def function_exports(module) do
     code = ":"<>module<>".module_info(:exports)"

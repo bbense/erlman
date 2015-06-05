@@ -50,6 +50,7 @@ defmodule ErlmanNroff do
 	
 	def swap_inline(line) do 
 		newline = String.replace(line,"\\fI","`") |> 
+              String.replace(line,"\\fB","`") |> 
 		          String.replace("\\fR","`") |>
 		          String.replace("\\&","") 
     newline<>"\n"

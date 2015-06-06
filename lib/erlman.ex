@@ -86,17 +86,19 @@ defmodule Erlman do
   Will raise error if :module is not loaded. 
   """
   def function_exports(module) do
-    code = ":"<>module<>".module_info(:exports)"
-    Code.eval_string(code,[],__ENV__)
+    code = module<>".module_info(:exports)"
+    Code.eval_string(code,[],__ENV__) |> elem(0)
   end 
+
   @doc """
     Return a list of tuples of the form 
     {{_function, _arity}, _line, _kind, _signature, text} 
   """
-  def get_function_docs(module,nroff_func,funcs) do
+  def get_function_docs(module,funcs,nroff_func) do
     ErlmanNroff.list_functions(nroff_func) |>
-    Enum.map(fn(d_str) -> ErlmanNroff.parse_function(d_str,funcs) end )
-  end 
+    Enum.filter_map(fn(d_str) -> ErlmanNroff.match_function(d_str,funcs) end , 
+                    fn(d_str) -> ErlmanNroff.parse_function(d_str,funcs) end )
+  end
 
   def get_moduledoc(module,mandoc) do
     {1,ErlmanNroff.to_markdown(mandoc)}
@@ -106,13 +108,53 @@ defmodule Erlman do
     true
   end 
 
+  # There needs to be a whole lot of clean up wrt whether module is an atom or string. 
+  def h(elixir_erlang_ref) do
+    search = convert(elixir_erlang_ref)
+    case Enum.count(search) do
+      1 -> print_doc(elixir_erlang_ref, elem(get_docs(elixir_erlang_ref, :moduledoc), 1) )
+      2 -> find_andprint_fdoc(search, get_docs(":"<>List.first(search), :docs) )
+    end
+  end 
+
+  def find_andprint_fdoc(search, doc_list ) do
+    [module,fname] = search
+    fatom = String.to_atom(fname)
+    arity = find_arity(module,fname)
+    arity |> Enum.map(fn(a) -> print_func(doc_list,search,a) end )
+  end 
+
+  def print_func(doc_list, search, arity) do
+    [module, fname] = search
+    doc_tup = List.keyfind(doc_list, { String.to_atom(fname), arity }, 0 )
+    { _tup, _line, _kind, _sig, info } = doc_tup
+    print_doc("def :#{module}.#{fname}",info)
+  end 
+
+  def find_arity(module,fname) do
+    function_exports(":"<>module) |>
+    Enum.filter_map(fn(tup) -> elem(tup,0) == String.to_atom(fname) end, 
+                    fn(tup) -> elem(tup,1) end )
+  end
+
+  defp print_doc(heading, doc) do
+    doc = doc || ""
+    if opts = IEx.Config.ansi_docs do
+      IO.ANSI.Docs.print_heading(heading, opts)
+      IO.ANSI.Docs.print(doc, opts)
+    else
+      IO.puts "* #{heading}\n"
+      IO.puts doc
+    end
+  end
+
   defp mandirs(path) do
     File.ls!(path) |> 
     Enum.filter_map(fn(entry) -> Regex.match?(~r/^man[1-8]/, entry) end , fn(entry) -> Path.join(path,entry) end ) |>
     Enum.filter(fn(entry) -> File.dir?(entry) end)
   end
 
-  defp convert(elixir_erlang_ref) do 
+  def convert(elixir_erlang_ref) do 
     String.lstrip(elixir_erlang_ref, ?: ) |>
     String.split(".")
   end

@@ -49,14 +49,15 @@ defmodule ErlmanNroff do
   """
   def parse_function(nroff_docstring,functions) do
     fkey = match_function(nroff_docstring,functions)
+    # Can't use Dict.get since there are multiple values. 
     signature = get_signature(nroff_docstring,Dict.get(functions,fkey))
-    {fkey, Dict.get(functions,fkey), 1, :def, signature, to_markdown(nroff_docstring) }
+    {{fkey, Dict.get(functions,fkey)}, 1, :def, signature, to_markdown(nroff_docstring) }
   end
 
   def match_function(nroff_dstring, functions) do 
     found = Dict.keys(functions) |> 
             Enum.map(fn(x) -> Atom.to_string(x) end ) |> 
-            Enum.find(fn(fname) -> String.starts_with(nroff_dstring,fname) end )
+            Enum.find(fn(fname) -> String.starts_with?(nroff_dstring,fname) end )
     case found do 
       nil -> nil
       _   -> String.to_atom(found)
@@ -69,7 +70,7 @@ defmodule ErlmanNroff do
 	
 	def swap_inline(line) do 
 		newline = String.replace(line,"\\fI","`") |> 
-              String.replace(line,"\\fB","`") |> 
+              String.replace("\\fB","`") |> 
 		          String.replace("\\fR","`") |>
 		          String.replace("\\&","") 
     newline<>"\n"

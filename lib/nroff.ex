@@ -7,21 +7,21 @@ defmodule ErlmanNroff do
   """
 	@man_macros ~W(.TH .SH .SS .TP .LP .RS .RE .nf .fi .br .B )
 
-
-  # Need to change this to a reduce, macro functions should return line and prepend for next line. 
+  # This is serious cheating, we should really implement the nroff state machine. 
+  # But since that is mostly about indentation, see how far we can get. 
 	def to_markdown(string) do
 		String.split(string,"\n") |>
 		Enum.map_join(fn(line) -> translate(line) end) 
 	end
 
   @doc """
-  Find the section of string that has the docs for function. 
+  Split string into list of function strings. 
   We assume erlang nroff that has this format. 
 
       .B
       function(arg1, arg2) -> ResultType
   """
-	def find(string,function) do
+	def list_functions(string) do
     String.split(string,"\n.B\n") 
 	end 
 
@@ -40,13 +40,32 @@ defmodule ErlmanNroff do
   end
 
   @doc """
-  Match up function docs to elements in functions returned
-  from module:module_info
+  Parse a function string.
+  foo(arg,arg,arg) -> ResultType
+  functions should be the result of :module.module_info(:exports)
+  Return should look like 
+   {{_function, _arity}, _line, _kind, _signature, text} 
+   signature is a list of tuples of the form {:arg,[],nil}
   """
-  def parse_functions(funcs,nroff_funcs) do
-    Enum.map(funcs, fn(x) -> { Atom.to_string(elem(x,0)), elem(x,1) } end ) |>
-    Enum.map(fn(pair) -> {pair, find(nroff_funcs,pair)} end )
+  def parse_function(nroff_docstring,functions) do
+    fkey = match_function(nroff_docstring,functions)
+    signature = get_signature(nroff_docstring,Dict.get(functions,fkey))
+    {fkey, Dict.get(functions,fkey), 1, :def, signature, to_markdown(nroff_docstring) }
   end
+
+  def match_function(nroff_dstring, functions) do 
+    found = Dict.keys(functions) |> 
+            Enum.map(fn(x) -> Atom.to_string(x) end ) |> 
+            Enum.find(fn(fname) -> String.starts_with(nroff_dstring,fname) end )
+    case found do 
+      nil -> nil
+      _   -> String.to_atom(found)
+    end 
+  end 
+
+  def get_signature(nroff_docstring,arity) do
+    0..arity |> Enum.map(fn(x) -> { "arg"<>Integer.to_string(x) , [], nil } end )
+  end 
 	
 	def swap_inline(line) do 
 		newline = String.replace(line,"\\fI","`") |> 

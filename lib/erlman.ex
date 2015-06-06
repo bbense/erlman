@@ -89,13 +89,17 @@ defmodule Erlman do
     code = ":"<>module<>".module_info(:exports)"
     Code.eval_string(code,[],__ENV__)
   end 
-
+  @doc """
+    Return a list of tuples of the form 
+    {{_function, _arity}, _line, _kind, _signature, text} 
+  """
   def get_function_docs(module,nroff_func,funcs) do
-    ErlmanNroff.parse_functions(funcs,nroff_func)
+    ErlmanNroff.list_functions(nroff_func) |>
+    Enum.map(fn(d_str) -> ErlmanNroff.parse_function(d_str,funcs) end )
   end 
 
   def get_moduledoc(module,mandoc) do
-    true
+    {1,ErlmanNroff.to_markdown(mandoc)}
   end 
 
   def get_all_docs(module,mandocs,funcs) do

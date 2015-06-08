@@ -49,9 +49,9 @@ defmodule ErlmanNroff do
   """
   def parse_function(nroff_docstring,functions) do
     fkey = match_function(nroff_docstring,functions)
-    # Can't use Dict.get since there are multiple values. 
-    signature = get_signature(nroff_docstring,Dict.get(functions,fkey))
-    {{fkey, Dict.get(functions,fkey)}, 1, :def, signature, to_markdown(nroff_docstring) }
+    arity = get_arity(nroff_docstring, functions)
+    signature = get_signature(arity)
+    {{fkey, arity}, 1, :def, signature, to_markdown(nroff_docstring) }
   end
 
   def match_function(nroff_dstring, functions) do 
@@ -64,7 +64,23 @@ defmodule ErlmanNroff do
     end 
   end 
 
-  def get_signature(nroff_docstring,arity) do
+  @doc """
+  Find first \(, count the number of commas until the \)
+  """
+  def get_arity(nroff_docstring,functions) do
+    String.codepoints(nroff_docstring) |>
+    Stream.transform(0,fn(x,acc) -> 
+                      case x do 
+                        "("  -> {[0], acc }  
+                        ","  -> {[0], acc }
+                        ")"  -> {:halt, acc} 
+                        _    -> {[], acc}
+                      end 
+                     end ) |>
+    Enum.count 
+  end 
+
+  def get_signature(arity) do
     0..arity |> Enum.map(fn(x) -> { "arg"<>Integer.to_string(x) , [], nil } end )
   end 
 	

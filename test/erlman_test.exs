@@ -17,4 +17,17 @@ defmodule ErlmanTest do
   	assert  File.read!("/usr/local/Cellar/erlang/17.5/lib/erlang/man/man3/crypto.3") == Erlman.manstring(":crypto.hash")
   end
 
+  test "get_arity works for 0" do 
+    assert Erlman.get_arity("timestamp() -> Timestamp\n\n\n\n") == 0 
+  end 
+
+  test "get_arity works for 1" do 
+    assert Erlman.get_arity("timestamp(Foo) -> Timestamp\n\n\n\n") == 1
+  end 
+
+  test "get_arity works for 2" do 
+    assert Erlman.get_arity("timestamp(Foo, Bar) -> Timestamp\n\n\n\n") == 2
+  end 
+
+
 end

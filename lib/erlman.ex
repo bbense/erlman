@@ -1,7 +1,20 @@
 defmodule Erlman do
+  @moduledoc """
+  This module attempts to duplicate the functionality of Code.get_docs 
+  by parsing the erlang man pages. The intent is to eventually extend
+  the iex h command to provide documenatation for at least the standard
+  erlang modules.
 
+  It also includes a minimal duplication of the iex h helper for testing.
+  This h function requires quoting the string. 
+
+  """
   require ErlmanNroff
-
+  
+  @doc """
+  Returns path to man pages by finding erl executable and attempting
+  to find the man/man3/ets.3 manpage using that directory path.
+  """
   def manpath do
     start = to_string(:os.find_executable('erl'))
     finish = Path.split(start) |>
@@ -31,6 +44,11 @@ defmodule Erlman do
     end
   end
 
+  @doc """
+  Returns the man page for function_name as a string. 
+  Returns `nofile` if it cannot find the manpage for the 
+  functions module.
+  """
   def manstring(function_name) do 
     case manpage(function_name) do
       {:ok, manfile} -> File.read!(manfile)
@@ -38,16 +56,76 @@ defmodule Erlman do
     end
   end
 
-  def module_doc(elixir_erlang_ref) do
-    doc = manstring(elixir_erlang_ref)
-    Nroff.to_markdown(doc)
+
+  @doc """
+  Split string into list of function strings. 
+  We assume erlang nroff that has this format. 
+
+      .B
+      function(arg1, arg2) -> ResultType
+  """
+  def list_functions(string) do
+    String.split(string,"\n.B\n") 
+  end 
+
+  @doc """
+  Splits manpage string into Module and Function Parts. 
+  """
+  def split(manstring) do
+    String.split(manstring,".SH EXPORTS", parts: 2)
   end
 
-  def function_doc(elixir_erlang_ref) do
-    function = convert(elixir_erlang_ref) |> Enum.at(1)
-    doc = manstring(elixir_erlang_ref)
-    fdoc = Nroff.find(doc,function)
-    Nroff.to_markdown(fdoc)
+  @doc """
+  Parse a function string.
+  foo(arg,arg,arg) -> ResultType
+  functions should be the result of :module.module_info(:exports)
+
+  Return should look like 
+   {{_function, _arity}, _line, _kind, _signature, text} 
+   signature is a list of tuples of the form {:arg,[],nil}
+  """
+  def parse_function(nroff_docstring,functions) do
+    fkey = match_function(nroff_docstring, functions)
+    arity = get_arity(nroff_docstring)
+    signature = get_signature(arity)
+    {{fkey, arity}, 1, :def, signature, ErlmanNroff.to_markdown(nroff_docstring) }
+  end
+
+  @doc """
+  Checks docstring against list of module function exports.
+  Does not check for arity. 
+  """
+  def match_function(nroff_dstring, functions) do 
+    found = Dict.keys(functions) |> 
+            Enum.map(fn(x) -> Atom.to_string(x) end ) |> 
+            Enum.find(fn(fname) -> String.starts_with?(nroff_dstring,fname) end )
+    case found do 
+      nil -> nil
+      _   -> String.to_atom(found)
+    end 
+  end 
+
+  @doc """
+  Find first \(, count the number of commas until the \)
+  """
+  def get_arity(nroff_docstring) do
+    String.codepoints(nroff_docstring) |>
+    Stream.transform(false , fn(x,acc) -> 
+                      case x do 
+                        "("  -> {[], true }  
+                        ","  -> {[0], acc }
+                        ")"  -> {:halt, acc} 
+                        _    -> if(acc, do: {[0], false }, else: {[], acc } )
+                      end 
+                     end ) |>
+    Enum.count 
+  end 
+
+  @doc """
+  Returns a largely bogus function signature.
+  """
+  def get_signature(arity) do
+    0..arity |> Enum.map(fn(x) -> { "arg"<>Integer.to_string(x) , [], nil } end )
   end 
 
   @doc """ 
@@ -67,16 +145,16 @@ defmodule Erlman do
       nil
     else 
      funcs = function_exports(module)
-     parse_docs(module,funcs,mandoc,kind)
+     parse_docs(funcs,mandoc,kind)
     end
   end
 
-  def parse_docs(module,funcs,mandoc,kind ) do
-    [nroff_mod,nroff_func] = ErlmanNroff.split(mandoc)
+  def parse_docs(funcs,mandoc,kind ) do
+    [nroff_mod,nroff_func] = Erlman.split(mandoc)
     case kind do 
-      :docs      -> get_function_docs(module,funcs,nroff_func)
-      :moduledoc -> get_moduledoc(module,nroff_mod)
-      :all       -> get_all_docs(module,funcs,mandoc)
+      :docs      -> get_function_docs(funcs,nroff_func)
+      :moduledoc -> get_moduledoc(nroff_mod)
+      :all       -> get_all_docs(funcs,mandoc)
       _          -> nil
     end
   end 
@@ -94,17 +172,17 @@ defmodule Erlman do
     Return a list of tuples of the form 
     {{_function, _arity}, _line, _kind, _signature, text} 
   """
-  def get_function_docs(module,funcs,nroff_func) do
-    ErlmanNroff.list_functions(nroff_func) |>
-    Enum.filter_map(fn(d_str) -> ErlmanNroff.match_function(d_str,funcs) end , 
-                    fn(d_str) -> ErlmanNroff.parse_function(d_str,funcs) end )
+  def get_function_docs(funcs,nroff_func) do
+    Erlman.list_functions(nroff_func) |>
+    Enum.filter_map(fn(d_str) -> Erlman.match_function(d_str,funcs) end , 
+                    fn(d_str) -> Erlman.parse_function(d_str,funcs) end )
   end
 
-  def get_moduledoc(module,mandoc) do
-    {1,ErlmanNroff.to_markdown(mandoc)}
+  def get_moduledoc(nroff_mod) do
+    {1,ErlmanNroff.to_markdown(nroff_mod)}
   end 
 
-  def get_all_docs(module,mandocs,funcs) do
+  def get_all_docs(_mandocs,_funcs) do
     true
   end 
 
@@ -112,14 +190,15 @@ defmodule Erlman do
   def h(elixir_erlang_ref) do
     search = convert(elixir_erlang_ref)
     case Enum.count(search) do
-      1 -> print_doc(elixir_erlang_ref, elem(get_docs(elixir_erlang_ref, :moduledoc), 1) )
-      2 -> find_andprint_fdoc(search, get_docs(":"<>List.first(search), :docs) )
+      1 -> docs = get_docs(elixir_erlang_ref, :moduledoc) 
+           if(docs, do: print_doc(elixir_erlang_ref, elem(docs, 1)), else: IO.puts "#{elixir_erlang_ref} not found\n")
+      2 -> docs = get_docs(":"<>List.first(search), :docs)
+           if(docs, do: find_andprint_fdoc(search, docs), else: IO.puts "#{elixir_erlang_ref} not found\n")
     end
   end 
 
   def find_andprint_fdoc(search, doc_list ) do
     [module,fname] = search
-    fatom = String.to_atom(fname)
     arity = find_arity(module,fname)
     arity |> Enum.map(fn(a) -> print_func(doc_list,search,a) end )
   end 

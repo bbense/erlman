@@ -67,6 +67,7 @@ defmodule Erlman do
   def list_functions(string) do
     # Need to merge back any elements of the Enum that do not start with the 
     # function pattern. See :binary.split\3 for example. 
+    # :erlang.get_cookie is not working.
     {list, last_string} = String.split(string,"\n.B\n") |> 
                           Enum.reduce({[], ""}, fn(str, acc ) -> next_str(str,acc) end )
     list ++ [last_string]

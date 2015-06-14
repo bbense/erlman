@@ -7,13 +7,6 @@ defmodule ErlmanNroff do
   """
 	@man_macros ~W(.TH .SH .SS .TP .LP .RS .RE .nf .fi .br .B )
 
-  # This is serious cheating, we should really implement the nroff state machine. 
-  # But since that is mostly about indentation, see how far we can get. 
-	def to_markdown(string) do
-		String.split(string,"\n") |>
-		Enum.map_join(fn(line) -> translate(line) end) 
-	end
-
   @doc """
   Split string into list of function strings. 
   We assume erlang nroff that has this format. 
@@ -24,13 +17,6 @@ defmodule ErlmanNroff do
 	def list_functions(string) do
     String.split(string,"\n.B\n") 
 	end 
-
-	def translate(line) do
-		case String.starts_with?(line, @man_macros) do
-			true  -> swap_macro(line)
-			false -> swap_inline(line)
-		end 
-	end
 
   @doc """
   Splits manpage string into Module and Function Parts. 
@@ -84,6 +70,21 @@ defmodule ErlmanNroff do
     0..arity |> Enum.map(fn(x) -> { "arg"<>Integer.to_string(x) , [], nil } end )
   end 
 	
+  # This is serious cheating, we should really implement the nroff state machine. 
+  # But since that is mostly about indentation, see how far we can get. 
+  def to_markdown(string) do
+    String.split(string, "\n") |>
+    Enum.map_reduce("", fn(line,prepend) -> translate(line,prepend) end) 
+  end
+
+  # Return { line, prepend }
+  def translate(line, prepend) do
+    case String.starts_with?(line, @man_macros) do
+      true  -> { swap_macro(line)
+      false -> { swap_inline(line), "" }
+    end 
+  end
+
 	def swap_inline(line) do 
 		newline = String.replace(line,"\\fI","`") |> 
               String.replace("\\fB","`") |> 
@@ -91,6 +92,7 @@ defmodule ErlmanNroff do
 		          String.replace("\\&","") 
     newline<>"\n"
 	end
+  
 
 	def get_macro(line) do
 		[ macro | line ] = String.split(line,~r/\s/, parts: 2 )
@@ -100,59 +102,67 @@ defmodule ErlmanNroff do
     end 
 	end 
 
+  @doc """
+  Attempt to emulate the nroff state machine as much as possible by 
+  returning both the line and a prepend expression for the next line. 
+  """
 	def swap_macro(line) do
 		{ macro, line } = get_macro(line)
 		swap_macro(macro,line)
 	end 
 
 	def swap_macro(".TH", line) do
-		"# "<>line<>"\n"
+		{ "# "<>line<>"\n", "" }
 	end
 
 	def swap_macro(".SH", line) do
-		"## "<>line<>"\n"
+		{ "## "<>line<>"\n", "" }
 	end
 
   def swap_macro(".SS", line) do
-    "### "<>line<>"\n" 
+    { "### "<>line<>"\n", "" }
   end
 
   def swap_macro(".TP", line) do
-    line 
+    { line , "" } 
   end
 
   def swap_macro(".LP", line) do
-    line 
+    { line , "" } 
   end
 
   @doc """
-    Indent count.to_i spaces
+    Indent count.to_i spaces, in general this is not 
+    translatable to markdown w/o context ( i.e. is list?)
   """
   def swap_macro(".RS", count) do
-    ""
+    { "", "" } 
   end
 
   def swap_macro(".RE", line) do
-    line 
+    { "", "" }  
   end
 
   @doc """
-    Turn off text fill
+    Turn off text fill, largely used to translate <code> blocks
   """
   def swap_macro(".nf", line) do
-    line 
+   { line , "    " }
   end
 
 	def swap_macro(".fi", line) do
-    line 
+   { line, "" } 
   end
 
+  @doc """
+  This should never be called since we split on .B to find functions.
+  """
   def swap_macro(".B", line) do
-    line 
+    { line , "" } 
   end
  
   def swap_macro(".br", line) do
-    "\n"<>line 
+   { "\n"<>line , "" }  
   end
 
 end

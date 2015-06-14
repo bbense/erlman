@@ -65,8 +65,28 @@ defmodule Erlman do
       function(arg1, arg2) -> ResultType
   """
   def list_functions(string) do
-    String.split(string,"\n.B\n") 
+    # Need to merge back any elements of the Enum that do not start with the 
+    # function pattern. See :binary.split\3 for example. 
+    {list, last_string} = String.split(string,"\n.B\n") |> 
+                          Enum.reduce({[], ""}, fn(str, acc ) -> next_str(str,acc) end )
+    list ++ [last_string]
   end 
+
+  defp next_str(str, acc) do
+    {list, dstring} = acc 
+    if(is_func_doc?(str)) do
+      {list ++ [dstring], str}
+    else 
+      {list, dstring<>"\n.SS "<>str}
+    end 
+  end 
+
+  @doc """
+  Return true if string starts with Erlang function pattern
+  """
+  def is_func_doc?(string) do
+   string =~ ~r/^\w+\(.*\) \-\> /
+  end
 
   @doc """
   Splits manpage string into Module and Function Parts. 

@@ -29,5 +29,9 @@ defmodule ErlmanTest do
     assert Erlman.get_arity("timestamp(Foo, Bar) -> Timestamp\n\n\n\n") == 2
   end 
 
+  # test "list_functions work when merging parts" do
+  #   nroff = "\n.B\nhappy(Arg) -> Result\n Do not worry, be happy\n\.B\nSinging\nin the rain\n"
+  #   md = 
+  # end
 
 end

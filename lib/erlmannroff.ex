@@ -111,10 +111,9 @@ defmodule ErlmanNroff do
    { line, "" } 
   end
 
-
-  #This should never be called since we split on .B to find functions.
+  # Erlman translates all non-function \n.B\nstring into \n.SS string
   def swap_macro(".B", line) do
-    { line , "" } 
+    { line , "\n### " } 
   end
  
   # Line break 

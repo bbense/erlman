@@ -11,14 +11,14 @@ erlang modules.
 It also includes a minimal duplication of the iex h helper for testing.
 This h function requires quoting the string. Some examples below: 
 
-	Erlman.h ":os"
-## os 3 \"kernel 3.2\" \"Ericsson AB\" \"Erlang Module Definition\"
-### NAME os \\- Operating System Specific Functions
+	Erlh.h ":os"
+## os 3 "kernel 3.2" "Ericsson AB" "Erlang Module Definition"
+### NAME os - Operating System Specific Functions
 ### DESCRIPTION
 
 The functions in this module are operating system specific. Careless use of these functions will result in programs that will only run on a specific platform. On the other hand, with careful use these functions can be of help in enabling a program to run on most platforms.
 
-	Erlman.h ":erlang.element"
+	Erlh.h ":erlang.element"
 
 element(N, Tuple) -> term()
 

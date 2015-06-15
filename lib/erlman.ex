@@ -109,7 +109,7 @@ defmodule Erlman do
     fkey = match_function(nroff_docstring, functions)
     arity = get_arity(nroff_docstring)
     signature = get_signature(arity)
-    {{fkey, arity}, 1, :def, signature, ErlmanNroff.to_markdown(nroff_docstring) }
+    {{fkey, arity}, 1, :def, signature, ErlmanNroff.to_markdown(".SS "<>nroff_docstring) }
   end
 
   @doc """
@@ -207,45 +207,10 @@ defmodule Erlman do
     true
   end 
 
-  # There needs to be a whole lot of clean up wrt whether module is an atom or string. 
-  def h(elixir_erlang_ref) do
-    search = convert(elixir_erlang_ref)
-    case Enum.count(search) do
-      1 -> docs = get_docs(elixir_erlang_ref, :moduledoc) 
-           if(docs, do: print_doc(elixir_erlang_ref, elem(docs, 1)), else: IO.puts "#{elixir_erlang_ref} not found\n")
-      2 -> docs = get_docs(":"<>List.first(search), :docs)
-           if(docs, do: find_andprint_fdoc(search, docs), else: IO.puts "#{elixir_erlang_ref} not found\n")
-    end
-  end 
-
-  def find_andprint_fdoc(search, doc_list ) do
-    [module,fname] = search
-    arity = find_arity(module,fname)
-    arity |> Enum.map(fn(a) -> print_func(doc_list,search,a) end )
-  end 
-
-  def print_func(doc_list, search, arity) do
-    [module, fname] = search
-    doc_tup = List.keyfind(doc_list, { String.to_atom(fname), arity }, 0 )
-    { _tup, _line, _kind, _sig, info } = doc_tup
-    print_doc("def :#{module}.#{fname}",info)
-  end 
-
   def find_arity(module,fname) do
     function_exports(":"<>module) |>
     Enum.filter_map(fn(tup) -> elem(tup,0) == String.to_atom(fname) end, 
                     fn(tup) -> elem(tup,1) end )
-  end
-
-  defp print_doc(heading, doc) do
-    doc = doc || ""
-    if opts = IEx.Config.ansi_docs do
-      IO.ANSI.Docs.print_heading(heading, opts)
-      IO.ANSI.Docs.print(doc, opts)
-    else
-      IO.puts "* #{heading}\n"
-      IO.puts doc
-    end
   end
 
   defp mandirs(path) do

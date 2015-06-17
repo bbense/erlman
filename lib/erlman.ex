@@ -15,7 +15,8 @@ defmodule Erlman do
   Returns path to man pages by finding erl executable and attempting
   to find the man/man3/ets.3 manpage using that directory path.
 
-  What should we do if we can't find erl? 
+  What should we do if we can't find erl? Or more likely can't find
+  man/man3/ets.3?
   """
   def manpath do
     start = to_string(:os.find_executable('erl'))
@@ -24,9 +25,9 @@ defmodule Erlman do
              Stream.scan(&Path.join(&2,&1)) |> 
              Enum.filter( fn(p)  -> File.exists?(Path.join([p,"man","man3","ets.3"])) end ) |>
              List.last
-      Path.join(finish,"man")
+      if finish , do: Path.join(finish,"man"), else: nil 
     else
-      "" 
+      nil
     end 
   end
 
@@ -41,8 +42,16 @@ defmodule Erlman do
 
   """
   def manpage(elixir_erlang_ref) do
+    mpath = Erlman.manpath
+    case mpath do 
+      nil -> {:error, :eno_manpages}
+      _   -> find_manpage(elixir_erlang_ref,mpath)
+    end
+  end 
+
+  defp find_manpage(elixir_erlang_ref,mpath) do
     target = convert(elixir_erlang_ref) |> Enum.at(0)
-    manfile = mandirs(Erlman.manpath) |>
+    manfile = mandirs(mpath) |>
               Enum.find_value(fn(dir) -> has_man?(dir,target) end)
     case manfile do
       nil -> {:error, :enoent}
@@ -52,13 +61,14 @@ defmodule Erlman do
 
   @doc """
   Returns the man page for function_name as a string. 
-  Returns `nofile` if it cannot find the manpage for the 
+  Returns `:nofile` if it cannot find the manpage for the 
   functions module.
   """
   def manstring(function_name) do 
     case manpage(function_name) do
       {:ok, manfile} -> File.read!(manfile)
       {:error, :enoent} -> :nofile
+      {:error, :eno_manpages} -> :nofile
     end
   end
 

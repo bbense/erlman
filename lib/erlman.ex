@@ -14,14 +14,20 @@ defmodule Erlman do
   @doc """
   Returns path to man pages by finding erl executable and attempting
   to find the man/man3/ets.3 manpage using that directory path.
+
+  What should we do if we can't find erl? 
   """
   def manpath do
     start = to_string(:os.find_executable('erl'))
-    finish = Path.split(start) |>
+    if start do 
+      finish = Path.split(start) |>
              Stream.scan(&Path.join(&2,&1)) |> 
              Enum.filter( fn(p)  -> File.exists?(Path.join([p,"man","man3","ets.3"])) end ) |>
              List.last
-    Path.join(finish,"man")
+      Path.join(finish,"man")
+    else
+      "" 
+    end 
   end
 
   @doc """
@@ -73,20 +79,29 @@ defmodule Erlman do
     list ++ [last_string]
   end 
 
+  # String off erlang: from man pages, See erlang:get_cookie as example. 
   defp next_str(str, acc) do
     {list, dstring} = acc 
     if(is_func_doc?(str)) do
-      {list ++ [dstring], str}
+      {list ++ [dstring], de_erl(str) }
     else 
       {list, dstring<>"\n.SS "<>str}
     end 
   end 
 
+  # Remove erlang: if string starts with that 
+  defp de_erl(string) do
+    case String.starts_with?(string,"erlang:") do
+      true -> String.slice(string,7,1000)
+      _    -> string
+    end 
+  end
+
   @doc """
   Return true if string starts with Erlang function pattern
   """
   def is_func_doc?(string) do
-   string =~ ~r/^\w+\(.*\) \-\> /
+   string =~ ~r/^[\w:]+\(.*\) \-\> /
   end
 
   @doc """
@@ -114,7 +129,9 @@ defmodule Erlman do
 
   @doc """
   Checks docstring against list of module function exports.
-  Does not check for arity. 
+  Does not check for arity. Fails for weird erlang:foo functions
+  since those are not bareword functions in erlang man pages.
+   :erlang.getcookie is example.  
   """
   def match_function(nroff_dstring, functions) do 
     found = Dict.keys(functions) |> 

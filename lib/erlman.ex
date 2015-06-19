@@ -15,20 +15,23 @@ defmodule Erlman do
   Returns path to man pages by finding erl executable and attempting
   to find the man/man3/ets.3 manpage using that directory path.
 
-  What should we do if we can't find erl? Or more likely can't find
-  man/man3/ets.3?
+  Return nil if we can't find erl or man/man3/ets.3
   """
   def manpath do
-    start = to_string(:os.find_executable('erl'))
-    if start do 
-      finish = Path.split(start) |>
-             Stream.scan(&Path.join(&2,&1)) |> 
-             Enum.filter( fn(p)  -> File.exists?(Path.join([p,"man","man3","ets.3"])) end ) |>
-             List.last
-      if finish , do: Path.join(finish,"man"), else: nil 
-    else
-      nil
+    start = System.find_executable("erl") 
+    case start do 
+      nil -> nil 
+      _   -> find_manpath(start)  
     end 
+  end
+
+  defp find_manpath(erl_path) do
+    mpath = erl_path |>
+            Path.split |> 
+            Stream.scan(&Path.join(&2,&1)) |> 
+            Enum.filter( fn(p)  -> File.exists?(Path.join([p,"man","man3","ets.3"])) end ) |>
+            List.last
+    if mpath , do: Path.join(mpath,"man"), else: nil 
   end
 
   @doc """

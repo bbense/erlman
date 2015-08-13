@@ -2,11 +2,13 @@ defmodule ErlmanTest do
   use ExUnit.Case
 
   test "Can find mandir " do
-    assert Erlman.manpath == "/usr/local/Cellar/erlang/17.5/lib/erlang/man"
+    assert String.ends_with? Erlman.manpath , "/man"
   end
 
   test "Can find manpage" do
-  	assert Erlman.manpage(":crypto") == {:ok ,"/usr/local/Cellar/erlang/17.5/lib/erlang/man/man3/crypto.3" }
+  	{status, path } = Erlman.manpage(":crypto")
+    assert status == :ok 
+    assert String.ends_with? path, "man/man3/crypto.3" 
   end 
 
   test "Return file not found" do 
@@ -14,7 +16,8 @@ defmodule ErlmanTest do
   end 
 
   test "Can read module for function into string" do
-  	assert  File.read!("/usr/local/Cellar/erlang/17.5/lib/erlang/man/man3/crypto.3") == Erlman.manstring(":crypto.hash")
+    {_, path } = Erlman.manpage(":crypto")
+  	assert  File.read!(path) == Erlman.manstring(":crypto.hash")
   end
 
   test "get_arity works for 0" do 

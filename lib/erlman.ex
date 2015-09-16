@@ -1,16 +1,13 @@
 defmodule Erlman do
   @moduledoc """
-  This module attempts to duplicate the functionality of Code.get_docs 
+  This module attempts to duplicate the functionality of Code.get_docs
   by parsing the erlang man pages. The intent is to eventually extend
   the iex h command to provide documenatation for at least the standard
   erlang modules.
 
-  It also includes a minimal duplication of the iex h helper for testing.
-  This h function requires quoting the string. 
-
   """
   require ErlmanNroff
-  
+
   @doc """
   Returns path to man pages by finding erl executable and attempting
   to find the man/man3/ets.3 manpage using that directory path.
@@ -18,20 +15,20 @@ defmodule Erlman do
   Return nil if we can't find erl or man/man3/ets.3
   """
   def manpath do
-    start = System.find_executable("erl") 
-    case start do 
-      nil -> nil 
-      _   -> find_manpath(start)  
-    end 
+    start = System.find_executable("erl")
+    case start do
+      nil -> nil
+      _   -> find_manpath(start)
+    end
   end
 
   defp find_manpath(erl_path) do
     mpath = erl_path |>
-            Path.split |> 
-            Stream.scan(&Path.join(&2,&1)) |> 
+            Path.split |>
+            Stream.scan(&Path.join(&2,&1)) |>
             Enum.filter( fn(p)  -> File.exists?(Path.join([p,"man","man3","ets.3"])) end ) |>
             List.last
-    if mpath , do: Path.join(mpath,"man"), else: nil 
+    if mpath , do: Path.join(mpath,"man"), else: nil
   end
 
   @doc """
@@ -46,11 +43,11 @@ defmodule Erlman do
   """
   def manpage(elixir_erlang_ref) do
     mpath = Erlman.manpath
-    case mpath do 
+    case mpath do
       nil -> {:error, :eno_manpages}
       _   -> find_manpage(elixir_erlang_ref,mpath)
     end
-  end 
+  end
 
   defp find_manpage(elixir_erlang_ref,mpath) do
     target = convert(elixir_erlang_ref) |> Enum.at(0)
@@ -63,11 +60,11 @@ defmodule Erlman do
   end
 
   @doc """
-  Returns the man page for function_name as a string. 
-  Returns `:nofile` if it cannot find the manpage for the 
+  Returns the man page for function_name as a string.
+  Returns `:nofile` if it cannot find the manpage for the
   functions module.
   """
-  def manstring(function_name) do 
+  def manstring(function_name) do
     case manpage(function_name) do
       {:ok, manfile} -> File.read!(manfile)
       {:error, :enoent} -> :nofile
@@ -77,37 +74,37 @@ defmodule Erlman do
 
 
   @doc """
-  Split string into list of function strings. 
-  We assume erlang nroff that has this format. 
+  Split string into list of function strings.
+  We assume erlang nroff that has this format.
 
       .B
       function(arg1, arg2) -> ResultType
   """
   def list_functions(string) do
-    # Need to merge back any elements of the Enum that do not start with the 
-    # function pattern. See :binary.split\3 for example. 
+    # Need to merge back any elements of the Enum that do not start with the
+    # function pattern. See :binary.split\3 for example.
     # :erlang.get_cookie is not working.
-    {list, last_string} = String.split(string,"\n.B\n") |> 
+    {list, last_string} = String.split(string,"\n.B\n") |>
                           Enum.reduce({[], ""}, fn(str, acc ) -> next_str(str,acc) end )
     list ++ [last_string]
-  end 
+  end
 
-  # String off erlang: from man pages, See erlang:get_cookie as example. 
+  # String off erlang: from man pages, See erlang:get_cookie as example.
   defp next_str(str, acc) do
-    {list, dstring} = acc 
+    {list, dstring} = acc
     if(is_func_doc?(str)) do
       {list ++ [dstring], de_erl(str) }
-    else 
+    else
       {list, dstring<>"\n.SS "<>str}
-    end 
-  end 
+    end
+  end
 
-  # Remove erlang: if string starts with that 
+  # Remove erlang: if string starts with that
   defp de_erl(string) do
     case String.starts_with?(string,"erlang:") do
       true -> String.slice(string,7,1000)
       _    -> string
-    end 
+    end
   end
 
   @doc """
@@ -118,7 +115,7 @@ defmodule Erlman do
   end
 
   @doc """
-  Splits manpage string into Module and Function Parts. 
+  Splits manpage string into Module and Function Parts.
   """
   def split(manstring) do
     String.split(manstring,".SH EXPORTS", parts: 2)
@@ -129,8 +126,8 @@ defmodule Erlman do
   foo(arg,arg,arg) -> ResultType
   functions should be the result of :module.module_info(:exports)
 
-  Return should look like 
-   {{_function, _arity}, _line, _kind, _signature, text} 
+  Return should look like
+   {{_function, _arity}, _line, _kind, _signature, text}
    signature is a list of tuples of the form {:arg,[],nil}
   """
   def parse_function(nroff_docstring,functions) do
@@ -144,42 +141,46 @@ defmodule Erlman do
   Checks docstring against list of module function exports.
   Does not check for arity. Fails for weird erlang:foo functions
   since those are not bareword functions in erlang man pages.
-   :erlang.getcookie is example.  
+   :erlang.getcookie is example.
   """
-  def match_function(nroff_dstring, functions) do 
-    found = Dict.keys(functions) |> 
-            Enum.map(fn(x) -> Atom.to_string(x) end ) |> 
+  def match_function(nroff_dstring, functions) do
+    found = Dict.keys(functions) |>
+            Enum.map(fn(x) -> Atom.to_string(x) end ) |>
             Enum.find(fn(fname) -> String.starts_with?(nroff_dstring,fname) end )
-    case found do 
+    case found do
       nil -> nil
       _   -> String.to_atom(found)
-    end 
-  end 
+    end
+  end
 
   @doc """
   Find first \(, count the number of commas until the \)
   """
   def get_arity(nroff_docstring) do
     String.codepoints(nroff_docstring) |>
-    Stream.transform(false , fn(x,acc) -> 
-                      case x do 
-                        "("  -> {[], true }  
+    Stream.transform(false , fn(x,acc) ->
+                      case x do
+                        "("  -> {[], true }
                         ","  -> {[0], acc }
-                        ")"  -> {:halt, acc} 
+                        ")"  -> {:halt, acc}
                         _    -> if(acc, do: {[0], false }, else: {[], acc } )
-                      end 
+                      end
                      end ) |>
-    Enum.count 
-  end 
+    Enum.count
+  end
 
   @doc """
   Returns a largely bogus function signature.
   """
   def get_signature(arity) do
-    0..arity |> Enum.map(fn(x) -> { "arg"<>Integer.to_string(x) , [], nil } end )
-  end 
+    case arity do
+      0 -> []
+      _ ->
+          1..arity |> Enum.map(fn(x) -> { String.to_atom("arg"<>Integer.to_string(x)) , [], nil } end )
+    end
+  end
 
-  @doc """ 
+  @doc """
   Emulate behaviour of Code.gets_docs as far as possible.
 
   Returns the docs for the given module.
@@ -190,11 +191,16 @@ defmodule Erlman do
   :all - a keyword list with both :docs and :moduledoc
 
   """
-  def get_docs(module,kind) do
+
+  def get_docs(module, kind) when is_atom(module) do
+    get_docs(":#{to_string(module)}", kind)
+  end
+
+  def get_docs(module, kind) do
     mandoc = Erlman.manstring(module)
     if mandoc == :nofile do
       nil
-    else 
+    else
      funcs = function_exports(module)
      parse_docs(funcs,mandoc,kind)
     end
@@ -202,54 +208,54 @@ defmodule Erlman do
 
   def parse_docs(funcs,mandoc,kind ) do
     [nroff_mod,nroff_func] = Erlman.split(mandoc)
-    case kind do 
+    case kind do
       :docs      -> get_function_docs(funcs,nroff_func)
       :moduledoc -> get_moduledoc(nroff_mod)
       :all       -> get_all_docs(funcs,mandoc)
       _          -> nil
     end
-  end 
+  end
 
   @doc """
   Return the results of :module.module_info(:exports)
-  Will raise error if :module is not loaded. 
+  Will raise error if :module is not loaded.
   """
   def function_exports(module) do
     code = module<>".module_info(:exports)"
     Code.eval_string(code,[],__ENV__) |> elem(0)
-  end 
+  end
 
   @doc """
-    Return a list of tuples of the form 
-    {{_function, _arity}, _line, _kind, _signature, text} 
+    Return a list of tuples of the form
+    {{_function, _arity}, _line, _kind, _signature, text}
   """
   def get_function_docs(funcs,nroff_func) do
     Erlman.list_functions(nroff_func) |>
-    Enum.filter_map(fn(d_str) -> Erlman.match_function(d_str,funcs) end , 
+    Enum.filter_map(fn(d_str) -> Erlman.match_function(d_str,funcs) end ,
                     fn(d_str) -> Erlman.parse_function(d_str,funcs) end )
   end
 
   def get_moduledoc(nroff_mod) do
     {1,ErlmanNroff.to_markdown(nroff_mod)}
-  end 
+  end
 
   def get_all_docs(_mandocs,_funcs) do
     true
-  end 
+  end
 
   def find_arity(module,fname) do
     function_exports(":"<>module) |>
-    Enum.filter_map(fn(tup) -> elem(tup,0) == String.to_atom(fname) end, 
+    Enum.filter_map(fn(tup) -> elem(tup,0) == String.to_atom(fname) end,
                     fn(tup) -> elem(tup,1) end )
   end
 
   defp mandirs(path) do
-    File.ls!(path) |> 
+    File.ls!(path) |>
     Enum.filter_map(fn(entry) -> Regex.match?(~r/^man[1-8]/, entry) end , fn(entry) -> Path.join(path,entry) end ) |>
     Enum.filter(fn(entry) -> File.dir?(entry) end)
   end
 
-  def convert(elixir_erlang_ref) do 
+  def convert(elixir_erlang_ref) do
     String.lstrip(elixir_erlang_ref, ?: ) |>
     String.split(".")
   end
@@ -260,11 +266,11 @@ defmodule Erlman do
       true -> manfile
       _    -> false
     end
-  end 
+  end
 
   defp page(dir,target) do
     section = target<>"."<>String.last(dir)
     Path.join(dir,section)
-  end 
-  
+  end
+
 end

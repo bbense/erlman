@@ -172,11 +172,42 @@ defmodule Erlman do
   @doc """
   Returns a largely bogus function signature.
   """
-  def get_signature(arity) do
+  def get_signature(arity) when is_integer(arity) do
     case arity do
       0 -> []
       _ ->
           1..arity |> Enum.map(fn(x) -> { String.to_atom("arg"<>Integer.to_string(x)) , [], nil } end )
+    end
+  end
+
+  @doc """
+  Return an less bogus function signature
+  """
+  def get_signature(nroff_docstring) when is_binary(nroff_docstring) do
+    tokens = get_tokens(nroff_docstring)
+    case Enum.count(tokens) do
+      0 -> []
+      _ -> Enum.map(tokens, fn(x) -> {String.to_atom(x),[],nil} end)
+    end
+  end
+
+  def get_tokens(nroff_docstring) do
+    String.codepoints(nroff_docstring)
+    |> Stream.transform("" , fn(x,acc) -> parse_docstring_chars(x,acc) end )
+    |> Enum.filter( fn(x) -> x != "" end )
+  end
+
+  defp parse_docstring_chars(x,acc) do
+    if (acc == :halt ) do
+      {:halt, acc}
+    else
+      case x do
+        "("  -> {[], ""}
+        ","  -> {[acc], ""}
+        " "  -> {[], acc}
+        ")"  -> {[acc], :halt}
+        _    -> {[], acc <> x}
+      end
     end
   end
 

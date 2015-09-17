@@ -83,7 +83,6 @@ defmodule Erlman do
   def list_functions(string) do
     # Need to merge back any elements of the Enum that do not start with the
     # function pattern. See :binary.split\3 for example.
-    # :erlang.get_cookie is not working.
     {list, last_string} = String.split(string,"\n.B\n") |>
                           Enum.reduce({[], ""}, fn(str, acc ) -> next_str(str,acc) end )
     list ++ [last_string]
@@ -121,6 +120,10 @@ defmodule Erlman do
     String.split(manstring,".SH EXPORTS", parts: 2)
   end
 
+  # Note: :beam_lib(get_chucks, :labeled_exports) looks like
+  # it might contain line numbers for functions. Still need
+  # to figure that out.
+
   @doc """
   Parse a function string.
   foo(arg,arg,arg) -> ResultType
@@ -133,7 +136,7 @@ defmodule Erlman do
   def parse_function(nroff_docstring,functions) do
     fkey = match_function(nroff_docstring, functions)
     arity = get_arity(nroff_docstring)
-    signature = get_signature(arity)
+    signature = get_signature(nroff_docstring)
     {{fkey, arity}, 1, :def, signature, ErlmanNroff.to_markdown(".SS "<>nroff_docstring) }
   end
 

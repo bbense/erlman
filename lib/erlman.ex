@@ -142,14 +142,12 @@ defmodule Erlman do
 
   @doc """
   Checks docstring against list of module function exports.
-  Does not check for arity. Fails for weird erlang:foo functions
-  since those are not bareword functions in erlang man pages.
-   :erlang.getcookie is example.
+  Does not check for arity.
   """
   def match_function(nroff_dstring, functions) do
     found = Dict.keys(functions) |>
             Enum.map(fn(x) -> Atom.to_string(x) end ) |>
-            Enum.find(fn(fname) -> String.starts_with?(nroff_dstring,fname) end )
+            Enum.find(fn(fname) -> String.starts_with?(nroff_dstring,fname<>"(") end )
     case found do
       nil -> nil
       _   -> String.to_atom(found)

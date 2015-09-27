@@ -53,6 +53,13 @@ defmodule ErlmanTest do
      Erlman.get_docs(:crypto, :moduledoc )
   end
 
+  test "get_docs :docs for :c parses :m and :memory" do
+    func_docs = Erlman.get_docs(:c, :docs )
+    d_list = for {{:m, 1}, 1, :def, _sig, markdown } <- func_docs , do: markdown
+    assert Enum.count(d_list) == 1
+  end
+
+
   # test "list_functions work when merging parts" do
   #   nroff = "\n.B\nhappy(Arg) -> Result\n Do not worry, be happy\n\.B\nSinging\nin the rain\n"
   #   md =

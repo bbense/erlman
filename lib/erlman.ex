@@ -117,7 +117,12 @@ defmodule Erlman do
   Splits manpage string into Module and Function Parts.
   """
   def split(manstring) do
-    String.split(manstring,".SH EXPORTS", parts: 2)
+    result = String.split(manstring,".SH EXPORTS", parts: 2)
+    case Enum.count(result) do
+      2 -> result
+      1 -> [List.first(result),""]
+    end
+
   end
 
   # Note: :beam_lib(get_chucks, :labeled_exports) looks like

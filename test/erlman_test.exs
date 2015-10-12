@@ -59,6 +59,12 @@ defmodule ErlmanTest do
     assert Enum.count(d_list) == 1
   end
 
+  test "get_docs :rpc finds init" do
+     Erlman.get_docs(:rpc, :init )
+  end
+
+
+
 
   # test "list_functions work when merging parts" do
   #   nroff = "\n.B\nhappy(Arg) -> Result\n Do not worry, be happy\n\.B\nSinging\nin the rain\n"

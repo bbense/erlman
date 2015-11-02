@@ -60,7 +60,7 @@ defmodule Erlman.DocHelper do
     doc_list = docs |> Enum.filter( fn(x) -> match_function(x, function) end )
     case doc_list do
       [] -> { :not_found, [{ "#{inspect module}.#{function}", "No documentation for #{inspect module}.#{function} found\n"}] }
-      _  -> { :found, get_docstrings(doc_list) }
+      _  -> { :found, get_docstrings(doc_list, module) }
     end
   end
 
@@ -69,13 +69,13 @@ defmodule Erlman.DocHelper do
     doc_list = docs |> Enum.filter( fn(x) -> match_function(x, function, arity) end )
     case doc_list do
       [] -> { :not_found, [{ "#{inspect module}.#{function}/#{arity}", "No documentation for #{inspect module}.#{function}/#{arity} found\n"}] }
-      _  -> { :found, get_docstrings(doc_list) }
+      _  -> { :found, get_docstrings(doc_list, module) }
     end
   end
 
-  defp get_docstrings(doc_list) do
-    for {{func, _arity}, _line, type, args, docstring } <- doc_list do
-      {"#{to_string(type)} "<>"#{to_string(func)}"<>stringify_args(args), docstring }
+  defp get_docstrings(doc_list, module) do
+    for {{func, _arity}, _line, _type, args, docstring } <- doc_list do
+      {":#{to_string(module)}."<>"#{to_string(func)}"<>stringify_args(args), docstring }
     end
   end
 

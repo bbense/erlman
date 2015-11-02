@@ -90,7 +90,9 @@ defmodule Erlman.DocHelper do
   end
 
   defp format_doc_arg({var, _, _}) do
-    Atom.to_string(var)
+    var
+    |> Atom.to_string
+    |> String.downcase
   end
 
   defp find_default_doc(doc, function, min) do

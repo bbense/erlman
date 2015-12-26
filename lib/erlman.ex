@@ -116,8 +116,8 @@ defmodule Erlman do
   @doc """
   Splits manpage string into Module and Function Parts.
   """
-  def split(manstring) do
-    result = String.split(manstring,".SH EXPORTS", parts: 2)
+  def split(manpage_str) do
+    result = String.split(manpage_str, ".SH EXPORTS", parts: 2)
     case Enum.count(result) do
       2 -> result
       1 -> [List.first(result),""]
@@ -164,15 +164,17 @@ defmodule Erlman do
   """
   def get_arity(nroff_docstring) do
     String.codepoints(nroff_docstring) |>
-    Stream.transform(false , fn(x,acc) ->
-                      case x do
-                        "("  -> {[], true }
-                        ","  -> {[0], acc }
-                        ")"  -> {:halt, acc}
-                        _    -> if(acc, do: {[0], false }, else: {[], acc } )
-                      end
-                     end ) |>
+    Stream.transform(false , fn(x,acc) -> arity_parse(x, acc) end ) |>
     Enum.count
+  end
+
+  defp arity_parse(char, acc) do
+    case char do
+      "("  -> {[], true }
+      ","  -> {[0], acc }
+      ")"  -> {:halt, acc}
+      _    -> if(acc, do: {[0], false }, else: {[], acc } )
+    end
   end
 
   @doc """

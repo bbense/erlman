@@ -95,11 +95,11 @@ defmodule Erlman.DocHelper do
     |> String.downcase
   end
 
-  defp find_default_doc(doc, function, min) do
+  defp find_default_doc(doc, function, minimum) do
     case elem(doc, 0) do
-      {^function, max} when max > min ->
+      {^function, max} when max > minimum ->
         defaults = Enum.count elem(doc, 3), &match?({:\\, _, _}, &1)
-        min + defaults >= max
+        minimum + defaults >= max
       _ ->
         false
     end

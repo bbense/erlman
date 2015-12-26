@@ -5,7 +5,7 @@ defmodule ErlmanNroff do
   on the fact that Erlang man pages have a standard conversion from the original
   XML version of the documentation.
   """
-	@man_macros ~W(.TH .SH .SS .TP .LP .RS .RE .nf .fi .br .B )
+  @man_macros ~W(.TH .SH .SS .TP .LP .RS .RE .nf .fi .br .B )
 
 
   # This is serious cheating, we should really implement the nroff state machine.
@@ -38,42 +38,42 @@ defmodule ErlmanNroff do
   Replace inline nroff macros with markdown tags.
   Currently maps both Bold and Italice to backquote.
   """
-	def swap_inline(line) do
-		newline = String.replace(line,"\\fI","`") |>
+  def swap_inline(line) do
+    newline = String.replace(line,"\\fI","`") |>
               String.replace("\\fB","`") |>
-		          String.replace("\\fR","`") |>
-		          String.replace("\\&","")
+              String.replace("\\fR","`") |>
+              String.replace("\\&","")
     newline<>"\n"
-	end
+  end
 
 
-	def get_macro(line) do
-		[ macro | line ] = String.split(line,~r/\s/, parts: 2 )
-		case line do
-			[] -> {macro, "" }
+  def get_macro(line) do
+    [ macro | line ] = String.split(line,~r/\s/, parts: 2 )
+    case line do
+      [] -> {macro, "" }
       _  -> {macro, Enum.at(line,0)}
     end
-	end
+  end
 
   @doc """
   Attempt to emulate the nroff state machine as much as possible by
   returning both the line and a prepend expression for the next line.
   """
-	def next_macro(line, prepend ) do
-		{ macro, line } = get_macro(line)
-		{ newline, newprepend } = swap_macro(macro, line)
+  def next_macro(line, prepend ) do
+    { macro, line } = get_macro(line)
+    { newline, newprepend } = swap_macro(macro, line)
     { prepend<>swap_inline(newline), newprepend }
-	end
+  end
 
   # Man page title
-	def swap_macro(".TH", line) do
-		{ "# "<>line<>"\n", "" }
-	end
+  def swap_macro(".TH", line) do
+    { "# "<>line<>"\n", "" }
+  end
 
   # Heading
-	def swap_macro(".SH", line) do
-		{ "## "<>line<>"\n", "" }
-	end
+  def swap_macro(".SH", line) do
+    { "## "<>line<>"\n", "" }
+  end
 
   # Sub Heading
   def swap_macro(".SS", line) do
@@ -107,7 +107,7 @@ defmodule ErlmanNroff do
   end
 
   # Turn text fill on, Treat as </code>
-	def swap_macro(".fi", line) do
+  def swap_macro(".fi", line) do
    { line, "" }
   end
 
